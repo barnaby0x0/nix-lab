@@ -23,7 +23,13 @@
         "x86_64-linux"
         "aarch64-linux"
       ];
-      system = "aarch64-linux";
+
+      formats = [
+        "raw-efi"
+        "iso"
+      ];
+
+      # system = "aarch64-linux";
       forAllSystems =
         f:
         nixpkgs.lib.genAttrs systems (
@@ -49,18 +55,18 @@
 
     in
     {
-      packages = forAllSystems (
-        { system, ... }: {
-          image = nixos-generators.nixosGenerate {
-            inherit system;
-            modules = [
-              nixos-lima.nixosModules.lima
-              ./configuration.nix
-            ];
-            format = "raw-efi";
-          };
-        }
-      );
+      # packages = forAllSystems (
+      #   { system, ... }: {
+      #     image = nixos-generators.nixosGenerate {
+      #       inherit system;
+      #       modules = [
+      #         nixos-lima.nixosModules.lima
+      #         ./configuration.nix
+      #       ];
+      #       format = "raw-efi";
+      #     };
+      #   }
+      # );
 
       # packages.${system}.image = nixos-generators.nixosGenerate {
       #   inherit system;
@@ -133,6 +139,22 @@
 
       # FORME 5
       nixosConfigurations = builtins.listToAttrs (map (system: mkHost "lima" system) systems);
+
+      # packages = forAllSystems (
+      #   { system, ... }: {
+      #     image = self.nixosConfigurations."lima-${system}".config.system.build.images."raw-efi";
+      #   }
+      # );
+      # Avec gestion des formats
+      packages = forAllSystems (
+        { system, ... }:
+        builtins.listToAttrs (
+          map (format: {
+            name = "image-${format}";
+            value = self.nixosConfigurations."lima-${system}".config.system.build.images.${format};
+          }) formats
+        )
+      );
 
       formatter = forAllSystems ({ pkgs, ... }: pkgs.nixfmt);
     };
