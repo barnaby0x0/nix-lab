@@ -1,0 +1,46 @@
+FROM ubuntu:latest
+
+ARG USER_ID=1001
+ARG GROUP_ID=1001
+ENV USER=user
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    xz-utils \
+    sudo \
+    git \
+    locales \
+    tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && locale-gen fr_CH.UTF-8 \
+ && ln -fs /usr/share/zoneinfo/Europe/Zurich /etc/localtime \
+ && dpkg-reconfigure -f noninteractive tzdata
+
+ENV LANG=fr_CH.UTF-8 \
+    LANGUAGE=fr_CH:fr \
+    LC_ALL=fr_CH.UTF-8
+
+COPY ca.crt /usr/local/share/ca-certificates/root_ca.crt
+RUN update-ca-certificates
+
+RUN groupadd -g ${GROUP_ID} user && \
+    useradd -l -u ${USER_ID} -g user -m -s /bin/bash user
+
+RUN usermod -aG sudo ${USER} && \
+    echo "${USER} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+RUN mkdir -m 0755 /nix && chown ${USER}:${USER} /nix
+
+USER ${USER}
+WORKDIR /home/${USER}
+RUN curl --proto '=https' --tlsv1.2 -L https://nixos.org | sh -s -- --no-daemon
+
+ENV PATH="/home/${USER}/.nix-profile/bin:${PATH}"
+
+RUN mkdir -p ~/.config/nix && \
+    echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf && \
+    echo "ssl-cert-file = /usr/local/share/ca-certificates/root_ca.crt" >> ~/.config/nix/nix.conf
+
+CMD ["bash", "-c", "nix develop /home/user/workspace/ubuntu/data/flakes/clients/vim/"]
+

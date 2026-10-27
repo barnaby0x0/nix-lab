@@ -1,0 +1,13 @@
+# nixos.yaml
+images:
+  - location: "/Users/vbeauvoir/workspace/gen-img/nixos/nixos.img"
+    arch: "aarch64"
+
+mounts:
+  - location: "~"
+    writable: true
+
+ssh:
+  localPort: 60022
+  loadDotSSHPubKeys: true
+
